@@ -1,0 +1,108 @@
+---
+title: "Compte rendu de TP"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+    - Nom : HOUSSEIN HOUMED 
+    - Prénom : HASSAN
+
+[**Thème :**]{.ul} [**Les pays qui paient le plus et le moins pour Netflix.**]{.ul}
+
+![](Which-countries-pay-the-most-and-least-for-Netflix_.jpg)[**Description des variables :**]{.ul}
+
+**Total.Library.Size :** Taille totale de la bibliothèque
+
+**Aug-18 :** Modification de la taille de la bibliothèque en Août 2018
+
+**Nov-18 :** Modification de la taille de la bibliothèque en Novembre 2018
+
+**Apr-19 :** Modification de la taille de la bibliothèque en Avril 2019
+
+**Aug-19 :** Modification de la taille de la bibliothèque en Août 2019
+
+**Aug-20 :** Modification de la taille de la bibliothèque en Août 2020
+
+**Jan-21 :** Modification de la taille de la bibliothèque en Janvier 2021
+
+**Dec-21 :** Modification de la taille de la bibliothèque en Décembre 2021
+
+**No..of.TV.Shows :** Nombre d'émissions de télévision
+
+**No..of.Movies :** Nombre de films
+
+**Cost.Per.Month...Basic.... :** Basique - coût par mois (USD)
+
+**Cost.Per.Month...Standard... :** Standard - coût par mois (USD)
+
+**Cost.Per.Month...Premium.... :** Premium - coût par mois (USD)
+
+[**Chargement des packages**]{.ul}
+
+```{r}
+library(sf)
+install.packages("rnaturalearthdata")
+library(plotly)
+library(mapdata)
+library(highcharter)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(lwgeom)
+library(ggspatial)
+require(maps)
+require(viridis)
+theme_set(
+  theme_void()
+)
+```
+
+[**Importation de mon jeu de donnée**]{.ul}
+
+```{r}
+data_has <- read.csv(file="data-2Kepe.csv",header=T,sep=",",dec=".")
+data_hassan <- data_has[-1]
+head(data_hassan)
+```
+
+**Visualisation de la carte du monde en fonction du taille des bibliothèques Netflix.**
+
+```{r}
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+highchart() %>%
+  hc_add_series_map(
+    worldgeojson,data_hassan , value = "Total.Library.Size", joinBy = c('name','Country')) %>%
+    hc_colorAxis(stops = color_stops()) %>% 
+  hc_title(text = "Netflix Library Sizes Around the World") %>%
+  hc_caption(text="Map: Comparitech  Source: uNoGS, JustWatch")
+```
+
+Dans cette carte ci-dessus , tout les pays qui sont coloriés sont des pays qui sont présents dans ma base de donnée et les autres qui ne sont pas coloriés ne sont pas présents.
+
+On conclut d'après ce graphique que les pays comme Canada,Slovakia et Bulgaria sont des pays qui ont plus des bibliothèques Netflix tandis que l'Indonesia possède de taille des bibliothèques netflix moins important.
+
+```{r}
+world_map <- map_data("world")
+
+base1 =left_join(dplyr::select(data_hassan,c(1,2)),world_map, 
+          by = c("Country" = "region"))
+
+base1 %>%
+ggplot() +
+  geom_sf(aes(x=long,y=lat,fill = Total.Library.Size),color="white",size=0.2) +
+  scale_fill_viridis_c()+
+  theme_minimal()+
+  theme(panel.background = element_rect(fill = "light blue"))
+```
+
+```{r}
+setwd("")
+
+library(rgdal)
+
+shp <- readOGR(dsn=".",layer="germany")
+```
