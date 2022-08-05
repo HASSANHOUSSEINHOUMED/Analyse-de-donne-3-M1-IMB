@@ -1,0 +1,236 @@
+---
+title: "DM Causalité"
+author: "Hassan HOUSSEIN HOUMED et RACHIDOU ET AHMED"
+date: "21/04/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dagitty)
+library(rjdqa)
+```
+
+# Exercice 1
+
+## Question 1
+
+```{r}
+dag <- dagitty(
+  'dag{
+    X [pos = "0, 0"]
+    U [pos = "0, -1"]
+    Z1 [pos = "1, -1.5"]
+    Z2 [pos = "1, -0.5"]
+    Z3 [pos = "2, -1"]
+    Y [pos = "2, 0"]
+    Z1 -> U -> Z2
+    Z1 -> U -> X -> Y
+    Z1 -> Z3 -> Z2
+    Z1 -> Z3 -> Y
+    X -> Y
+  }'
+)
+
+plot(dag)
+```
+
+$$\text{D'après mon DAG, les chemins ouverts entre X et Y sont :} \\ 
+{X -> Y} \\
+{X <- U <- Z1 -> Z3}-> Y$$
+$$\text{Pour vérifier les chemins ouverts entre X et Y , je vais utilisé la commande suivant :}$$
+
+```{r}
+paths(dag, from = "X", to = "Y")
+```
+
+## Question 2
+
+$$\text{il faut bloquer le chemin suivant pour identifier l'effet causal de X sur Y} \\
+{X <- U <- Z1 -> Z3 -> Y}$$
+
+## Question 3
+
+$$\text{Si on n'observe pas U,On peut pas identifier l'effet causal de X sur Y } \\ \text{car le chémin suivant empêche l'effet causal de X sur Y} \\
+{Z1 -> Z3 -> Y}$$
+
+## Question 4
+
+$$ \text{Les ensembles d'ajustements pour le couple (X,Y) sont :} $$
+
+```{r}
+adjustmentSets(dag, exposure = "X", outcome = "Y")
+```
+
+# Exercice 2
+
+```{r}
+dag2 <- dagitty(
+  'dag{
+    X [pos = "0, 0"]
+    U [pos = "0, -1"]
+    Z [pos = "1, 0.5"]
+    W [pos = "1, 0"]
+    V [pos = "1, -1"]
+    Y [pos = "2, 0"]
+    R [pos = "2, -1"]
+    U -> X -> W -> Y
+    U -> X -> Z -> W -> Y
+    U -> V -> Y
+    R -> V
+    R -> Y
+  }'
+)
+plot(dag2)
+```
+
+
+## Question 1
+```{r}
+set.seed(123)
+EU = rnorm(1000,0,sqrt(0.5))
+EX = rnorm(1000,0,sqrt(0.5))
+ER = rnorm(1000,0,sqrt(0.5))
+EV = rnorm(1000,0,sqrt(0.5))
+EZ = rnorm(1000,0,sqrt(0.5))
+EW = rnorm(1000,0,sqrt(0.5))
+EY = rnorm(1000,0,sqrt(0.5))
+
+U = 1 + EU
+X = U + EX
+R = 2 + ER
+V = U + R + EV
+Z = X + EZ
+W = Z + 2*X + EW
+Y = 2*V + W + R + EY
+```
+
+## Question 2
+
+$$ \text{X a un effet causal sur Y car ils existents des chemins ouverts qui sont dirigé vers Y} $$
+
+## Question 3
+
+$$
+\mathbb{F}(U=u, R=r, V=v, Z=z, W=w, Y=y|\ do(X=x))=\\F(R=r). F(U=u).F(V=v | R=r, U=u)\\.F(W=w | X=x, Z=z).F(Z=z|X=x).F(Y=y|R=r, V=v, W=w)
+$$
+
+## Question 4
+
+$$\text{L’expression de la loi de probabilité F(y|do(x)) est :}$$
+
+$$
+\mathbb{F}(Y=y|\ do(X=x))= \int_{u}\int_{v}\int_{r}\int_{w}\int_{z} F(R=r). F(V=v).F(V=v | R=r, U=u)\\.F(W=w | X=x, Z=z).F(Z=z|X=x).F(Y=y|R=r, V=v, W=w)\ \mathrm{d}u \ \mathrm{d}v \ \mathrm{d}r\ \mathrm{d}w \ \mathrm{d}z
+$$
+
+## Question 5
+
+```{r}
+Z1 = 1 + EZ
+W1 = Z1 + 2 + EW
+Y1 = 2*V + W1 + R + EY
+
+Z0 = EZ
+W0 = Z0 + EW
+Y0 = 2*V + W0 + R + EY
+```
+
+## Question 6
+
+```{r}
+mean(Y1-Y0)
+```
+
+## Question 7
+
+$$\text{L'ensemble d’ajustement pour identifier P(y|do(x)) sont :}$$
+
+```{r}
+adjustmentSets(dag2, exposure = "X", outcome = "Y")
+```
+
+
+## Question 8
+
+$$\text{La formule d’ajustement permettant d’identifier P(y|do(x)) à l’aide du variable d’ajustement { U } est :} \\ $$
+
+$$
+\mathbb{F}(Y=y|\ do(X=x))=\int_{u} F(U=u).F(Y=y|R=r, V=v, W=w)\ \mathrm{d}u
+$$
+
+$$\text{La formule d’ajustement permettant d’identifier P(y|do(x)) à l’aide du variable d’ajustement { V , R } est :} \\ $$
+
+$$
+\mathbb{F}(Y=y|\ do(X=x))=\int_{v}\int_{r}\ F(R=r, V=v).F(Y=y|R=r, V=v, X=x)\ \mathrm{d}v \ \mathrm{d}r\ 
+$$
+
+
+## Question 9
+
+```{r}
+lm(Y~X)
+mean(Y1-Y0)
+```
+$$\text{On peut voire que sans faire l'ajustement,le coefficient estimé de X  est eloigné du vrai valeur d'effet causal moyen calculé dans la question 6} \\ \text{donc dans la suite on va regarder si l'ajustement des variables va nous permettre d'avoir la vrai valeur d'effet causal moyen.}$$
+
+
+
+
+
+```{r}
+lm(Y~X+U)
+lm(Y~X+V+R)
+```
+$$\text{On voit que la valeur du coefficient de X pour les deux modèles estime bien la vrai valeur d'effet causal moyen} ~ \\ \text{Donc les ensembles d'ajustements { U } et { V , R } sont bel et bien les ensembles d'ajustements} \\ \text{qui vont nous permettre d'identifier l'effet causal de X sur Y}$$
+
+
+# Exercice 3
+
+## Relation 3
+
+En appliquant la loi jointe et la définition de "do", on obtient la relation(3) :
+$$
+P(Y, A, Z, W) = P(Z).P(A|Z).P(W|A).P(Y|W,Z) \\
+\mathbb{P}(Y, Z, W|do(A=a)) = P(Z).P(W|A=a).P(Y|W,Z) \\
+\mathbb{P}(Y|do(A=a)) = \sum_{z,w} P(Z).P(W|A=a).P(Y|W,Z)
+ $$
+
+## Relation 4
+
+En appliquant la formule de probabilité totale , on obtient la relation(4) :
+
+$$\sum_{z} P(Z=z).P(W=w|A=a).P(Y=y|W=w,Z=z) \\ =
+\sum_{z, a'} P(z, a').P(y|z,w)$$
+
+
+## Relation 5
+
+
+En appliquant la formule de probabilité conditionnelle , on obtient la relation(5) :
+
+$$\sum_{z, a'} P(a').P(z|a').P(y|z, w)$$
+
+## Relation 6
+
+
+En appliquant la formule de l'ignorabilité conditionnelle , on obtient la relation(6) :
+
+$$\sum_{z, a'} P(a').P(z|a', w).P(y|a', z, w)$$
+
+
+
+## Relation 7
+
+
+En appliquant la formule de l'inverse de probabilité conditionnelle , on obtient la relation(7) :
+
+$$\sum_{z, a'} P(a').P(z, y|a', w)$$
+
+
+## Relation 8
+
+En appliquant la formule de l'inverse de probabilité totale , on obtient la relation(8) :
+
+$$\sum_{a'} P(a').P(y|a', w) = \sum_{a'} P(y,a'|w)$$
